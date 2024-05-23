@@ -49,26 +49,28 @@ def check_video(request):
                 exit()
 
             num_frame = 0
-            image_1, image_2
+            image_1 = cv2.imread('image1.jpg', cv2.IMREAD_GRAYSCALE)
+            image_2 = cv2.imread('image1.jpg', cv2.IMREAD_GRAYSCALE)
             while True:
                 ret, frame = cap.read()
 
-                if not ret:
-                    break
-                num_frame += 1
-                image_1 = frame
-                if(num_frame<200):
-                    image_2 = frame
-                    res = detect_constrast_change(image_1, image_2, 50)
-                    if (res != ""):
-                        results.append({'constast': res})
+                if(num_frame==0):
+                    image_1 = frame
+                if(num_frame<5):
+                    num_frame += 1
                     continue
-                num_frame = 0
-                frame_resized = cv2.resize(frame, (img_width, img_height))
+                elif (num_frame == 5):
+                    image_2 = frame
+                    detect_contrast_change(image_1, image_2, 50)
+                    num_frame = 0
+                frame_resized = cv2.resize(frame, (176, 208))
 
-                frame_expanded = np.expand_dims(frame_resized, axis=0)
+                frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
+                img_array = image.img_to_array(frame_rgb)
+                img_array = np.expand_dims(img_array, axis=0)
+                img_array /= 255.0
 
-                prediction = loaded_model.predict(frame_expanded)
+                prediction = loaded_model.predict(img_array)
                 predicted_class = np.argmax(prediction)
                 class_label = dataset[predicted_class]
 
@@ -92,7 +94,9 @@ def detect_contrast_change(image1, image2, threshold):
     # Проверяем наличие резких изменений контрастности
     contrast_change_detected = len(contours) > 0
     if contrast_change_detected:
-      return "Резкое изменение контрастности обнаружено."
+      result = "Обнаружено резкий переход контраста"
+      return JsonResponse({'status': 'success', 'results': result})
     else:
-      return ""
+      result = "Изменение контраста в пределах нормы"
+      return JsonResponse({'status': 'success', 'results': result})
     #return contrast_change_detected, diff, thresholded
